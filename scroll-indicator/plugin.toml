@@ -1,13 +1,357 @@
 id           = "83raiders/scroll-indicator"
 name         = "Scroll Indicator"
-version      = "1.1.1"
-plugin_api   = 49
+version      = "1.9.0"
+plugin_api   = 43
 author       = "83raiders"
 license      = "MIT"
 icon         = "dots"
-description  = "Shows your column position in Hyprland's scrolling layout as dots on the bar."
+description  = "Shows your column position in Hyprland's scrolling layout as dots or a focused-color line on the bar."
 tags         = ["hyprland", "indicator", "bar"]
 dependencies = ["hyprctl", "socat"]
+
+[[setting]]
+key = "style"
+type = "select"
+label_key = "settings.style.label"
+description_key = "settings.style.description"
+default = "dots"
+options = [
+  { value = "dots", label_key = "styles.dots" },
+  { value = "line", label_key = "styles.line" },
+]
+
+[[setting]]
+key = "alignment"
+type = "select"
+label_key = "settings.alignment.label"
+description_key = "settings.alignment.description"
+default = "center"
+options = [
+  { value = "center", label_key = "options.alignment.center" },
+  { value = "top", label_key = "options.alignment.top" },
+  { value = "bottom", label_key = "options.alignment.bottom" },
+]
+
+[[setting]]
+key = "alignment_size"
+type = "int"
+label_key = "settings.alignment_size.label"
+description_key = "settings.alignment_size.description"
+default = 34
+min = 8
+max = 160
+visible_when = { key = "alignment", values = ["top", "bottom"] }
+
+[[setting]]
+key = "edge_inset"
+type = "int"
+label_key = "settings.edge_inset.label"
+description_key = "settings.edge_inset.description"
+default = 2
+min = 0
+max = 40
+visible_when = { key = "alignment", values = ["top", "bottom"] }
+
+[[setting]]
+key = "dot_size"
+type = "int"
+label_key = "settings.dot_size.label"
+description_key = "settings.dot_size.description"
+default = 8
+min = 4
+max = 20
+visible_when = { key = "style", values = ["dots"] }
+
+[[setting]]
+key = "dot_spacing"
+type = "int"
+label_key = "settings.dot_spacing.label"
+description_key = "settings.dot_spacing.description"
+default = 6
+min = 0
+max = 20
+visible_when = { key = "style", values = ["dots"] }
+
+[[setting]]
+key = "dot_shape"
+type = "select"
+label_key = "settings.dot_shape.label"
+description_key = "settings.dot_shape.description"
+default = "round"
+visible_when = { key = "style", values = ["dots"] }
+options = [
+  { value = "round", label_key = "options.dot_shape.round" },
+  { value = "square", label_key = "options.dot_shape.square" },
+]
+
+[[setting]]
+key = "fill_inactive_dots"
+type = "bool"
+label_key = "settings.fill_inactive_dots.label"
+description_key = "settings.fill_inactive_dots.description"
+default = false
+visible_when = { key = "style", values = ["dots"] }
+
+[[setting]]
+key = "segment_length"
+type = "int"
+label_key = "settings.segment_length.label"
+description_key = "settings.segment_length.description"
+default = 20
+min = 4
+max = 60
+visible_when = { key = "style", values = ["line"] }
+
+[[setting]]
+key = "line_thickness"
+type = "int"
+label_key = "settings.line_thickness.label"
+description_key = "settings.line_thickness.description"
+default = 3
+min = 1
+max = 12
+visible_when = { key = "style", values = ["line"] }
+
+[[setting]]
+key = "line_gap"
+type = "int"
+label_key = "settings.line_gap.label"
+description_key = "settings.line_gap.description"
+default = 0
+min = 0
+max = 20
+visible_when = { key = "style", values = ["line"] }
+
+[[setting]]
+key = "line_radius"
+type = "int"
+label_key = "settings.line_radius.label"
+description_key = "settings.line_radius.description"
+default = 0
+min = 0
+max = 12
+visible_when = { key = "style", values = ["line"] }
+
+[[setting]]
+key = "outer_radius"
+type = "int"
+label_key = "settings.outer_radius.label"
+description_key = "settings.outer_radius.description"
+default = 0
+min = 0
+max = 12
+visible_when = { key = "style", values = ["line"] }
+
+[[setting]]
+key = "inactive_opacity"
+type = "double"
+label_key = "settings.inactive_opacity.label"
+description_key = "settings.inactive_opacity.description"
+default = 1.0
+min = 0.1
+max = 1.0
+
+[[setting]]
+key = "use_theme_colors"
+type = "bool"
+label_key = "settings.use_theme_colors.label"
+description_key = "settings.use_theme_colors.description"
+default = true
+
+[[setting]]
+key = "focused_color"
+type = "color"
+label_key = "settings.focused_color.label"
+description_key = "settings.focused_color.description"
+default = "#89b4fa"
+visible_when = { key = "use_theme_colors", values = ["false"] }
+
+[[setting]]
+key = "inactive_color"
+type = "color"
+label_key = "settings.inactive_color.label"
+description_key = "settings.inactive_color.description"
+default = "#9399b2"
+visible_when = { key = "use_theme_colors", values = ["false"] }
+
+[[setting]]
+key = "hover_use_theme_color"
+type = "bool"
+label_key = "settings.hover_use_theme_color.label"
+description_key = "settings.hover_use_theme_color.description"
+default = true
+
+[[setting]]
+key = "hover_color"
+type = "color"
+label_key = "settings.hover_color.label"
+description_key = "settings.hover_color.description"
+default = "#ffffff"
+visible_when = { key = "hover_use_theme_color", values = ["false"] }
+
+[[setting]]
+key = "hover_opacity"
+type = "double"
+label_key = "settings.hover_opacity.label"
+description_key = "settings.hover_opacity.description"
+default = 0.18
+min = 0
+max = 1
+
+[[setting]]
+key = "hover_coverage"
+type = "int"
+label_key = "settings.hover_coverage.label"
+description_key = "settings.hover_coverage.description"
+default = 100
+min = 10
+max = 100
+
+[[setting]]
+key = "hover_thickness"
+type = "int"
+label_key = "settings.hover_thickness.label"
+description_key = "settings.hover_thickness.description"
+default = 0
+min = 0
+max = 64
+
+[[setting]]
+key = "hover_radius"
+type = "int"
+label_key = "settings.hover_radius.label"
+description_key = "settings.hover_radius.description"
+default = 4
+min = 0
+max = 32
+
+[[setting]]
+key = "animations"
+type = "bool"
+label_key = "settings.animations.label"
+description_key = "settings.animations.description"
+default = true
+
+[[setting]]
+key = "animation_style"
+type = "select"
+label_key = "settings.animation_style.label"
+description_key = "settings.animation_style.description"
+default = "crossfade"
+visible_when = { key = "animations", values = ["true"] }
+options = [
+  { value = "crossfade", label_key = "options.animation_style.crossfade" },
+  { value = "slide", label_key = "options.animation_style.slide" },
+  { value = "grow", label_key = "options.animation_style.grow" },
+  { value = "wipe", label_key = "options.animation_style.wipe" },
+]
+
+[[setting]]
+key = "slide_fluidity"
+type = "double"
+label_key = "settings.slide_fluidity.label"
+description_key = "settings.slide_fluidity.description"
+default = 0.65
+min = 0.0
+max = 1.0
+visible_when = { key = "animation_style", values = ["slide"] }
+
+[[setting]]
+key = "animation_curve"
+type = "select"
+label_key = "settings.animation_curve.label"
+description_key = "settings.animation_curve.description"
+default = "ease_out"
+visible_when = { key = "animations", values = ["true"] }
+options = [
+  { value = "linear", label_key = "options.animation_curve.linear" },
+  { value = "ease_in", label_key = "options.animation_curve.ease_in" },
+  { value = "ease_out", label_key = "options.animation_curve.ease_out" },
+  { value = "ease_in_out", label_key = "options.animation_curve.ease_in_out" },
+  { value = "exponential_out", label_key = "options.animation_curve.exponential_out" },
+  { value = "bouncy", label_key = "options.animation_curve.bouncy" },
+  { value = "custom", label_key = "options.animation_curve.custom" },
+]
+
+[[setting]]
+key = "curve_power"
+type = "double"
+label_key = "settings.curve_power.label"
+description_key = "settings.curve_power.description"
+default = 3.0
+min = 1.5
+max = 6
+visible_when = { key = "animation_curve", values = ["ease_in", "ease_out", "ease_in_out"] }
+
+[[setting]]
+key = "curve_exponential"
+type = "double"
+label_key = "settings.curve_exponential.label"
+description_key = "settings.curve_exponential.description"
+default = 10.0
+min = 2
+max = 20
+visible_when = { key = "animation_curve", values = ["exponential_out"] }
+
+[[setting]]
+key = "curve_bounce_strength"
+type = "double"
+label_key = "settings.curve_bounce_strength.label"
+description_key = "settings.curve_bounce_strength.description"
+default = 1.0
+min = 0
+max = 2
+visible_when = { key = "animation_curve", values = ["bouncy"] }
+
+[[setting]]
+key = "curve_x1"
+type = "double"
+label_key = "settings.curve_x1.label"
+description_key = "settings.curve_x1.description"
+default = 0.25
+min = 0
+max = 1
+visible_when = { key = "animation_curve", values = ["custom"] }
+
+[[setting]]
+key = "curve_y1"
+type = "double"
+label_key = "settings.curve_y1.label"
+description_key = "settings.curve_y1.description"
+default = 0.1
+min = 0
+max = 1
+visible_when = { key = "animation_curve", values = ["custom"] }
+
+[[setting]]
+key = "curve_x2"
+type = "double"
+label_key = "settings.curve_x2.label"
+description_key = "settings.curve_x2.description"
+default = 0.25
+min = 0
+max = 1
+visible_when = { key = "animation_curve", values = ["custom"] }
+
+[[setting]]
+key = "curve_y2"
+type = "double"
+label_key = "settings.curve_y2.label"
+description_key = "settings.curve_y2.description"
+default = 1.0
+min = 0
+max = 1
+visible_when = { key = "animation_curve", values = ["custom"] }
+
+[[setting]]
+key = "animation_duration"
+type = "int"
+label_key = "settings.animation_duration.label"
+description_key = "settings.animation_duration.description"
+default = 180
+min = 50
+max = 1000
+visible_when = { key = "animations", values = ["true"] }
 
 [[widget]]
 id    = "dots"

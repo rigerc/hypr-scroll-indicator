@@ -25,7 +25,7 @@ HYPR_VERSION = os.environ.get("HYPR_VERSION", "?")
 NOCT_VERSION = os.environ.get("NOCT_VERSION", "?")
 
 # hyprctl -j fields the widget reads (keep in sync with widget.luau)
-HYPR_JSON_FIELDS = ["tiledLayout", "address", "at", "floating", "mapped", "hidden", "workspace", "name"]
+HYPR_JSON_FIELDS = ["tiledLayout", "address", "at", "floating", "mapped", "hidden", "workspace", "name", "title", "class"]
 
 
 def grep(root: Path, needle: str, exts=(".cpp", ".hpp", ".h", ".cc")) -> str | None:

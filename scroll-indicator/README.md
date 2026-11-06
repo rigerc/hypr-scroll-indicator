@@ -2,7 +2,8 @@
 
 Hyprland's scrolling layout has no built-in position indicator: you can't tell how many windows are
 off-screen or where you are in the row. This bar widget adds one: one dot per column, **●** for the
-focused column and **○** for the rest. It hides itself on workspaces that don't use the scrolling layout.
+focused column and **○** for the rest. You can also use a continuous line with a different color for
+the focused column. It hides itself on workspaces that don't use the scrolling layout.
 
 ```
 ○ ● ○ ○      ← 4 columns, the 2nd is focused
@@ -22,6 +23,7 @@ workspace ([Drawer bounce](#optional-a-drawer-bounce-when-entering-the-scrolling
 
 ## Requirements
 
+- Noctalia with plugin API **43 or newer**.
 - Hyprland **0.56 or newer** (reads `tiledLayout` and workspace names from `hyprctl -j`).
 - `hyprctl` on `PATH` (ships with Hyprland).
 - `socat` on `PATH`, for live updates from Hyprland's event socket. Without it the widget falls back
@@ -43,7 +45,95 @@ workspace ([Drawer bounce](#optional-a-drawer-bounce-when-entering-the-scrolling
 
 3. Switch to a workspace that uses the scrolling layout. The dots update as you move between columns,
    open or close windows. Hover the widget for "Scrolling: column 2 of 4". Windows stacked in the same
-   column count as one dot; floating windows are not counted.
+   column count as one dot; floating windows are not counted. Hover a dot or line segment for a
+   hover highlight and a native window-title tooltip. Stacked columns list all their window titles; empty
+   titles fall back to the app name, then “Untitled window”. Right-click any segment to open settings.
+
+### Appearance settings
+
+Open **Settings → Plugins → Scroll Indicator** (the gear on its row), or **right-click the indicator**.
+Changes save through Noctalia and apply to the widget automatically.
+
+- **Indicator style:** Dots (default) or Line. Line joins one equal-length segment per column into a
+  continuous strip; the segment containing the focused app uses the focus color.
+- **Alignment:** Center (default), Top / left, or Bottom / right. For edge alignment, set
+  **Alignment height / width** to your bar thickness and adjust **Edge inset**. On a horizontal bar
+  this positions the indicator at the top or bottom; on a vertical bar it positions it left or right.
+  If the widget has a custom scale, divide the bar thickness by that scale for the alignment size.
+- **Dot size / spacing:** adjust the diameter and the gap between dots.
+- **Dot shape / fill inactive dots:** choose round or square markers and outline or fill inactive dots.
+- **Line segment length / thickness:** adjust the length per column and the thickness of the line.
+- **Line segment gap / corner radius:** use zero gap for a continuous strip, or add gaps and rounded
+  corners for dashes or pills. Radius is capped at half the segment's shortest side.
+- **Outer edge radius:** rounds only the two outside ends of the line, independently of segment
+  rounding. Set the segment corner radius to zero for a continuous line with straight internal joins.
+  End radii are capped at half the segment length or line thickness, whichever is smaller.
+- **Hover cover:** choose the theme foreground or a custom color, opacity, length coverage (10–100%),
+  thickness, and corner radius. Coverage is centered within each segment. Zero thickness follows the
+  marker size; a larger thickness also enlarges the tooltip target. Keep it within the bar's available
+  space. Zero opacity hides the cover while retaining window-title tooltips. Covers fade in and out
+  smoothly when animations are enabled; rapid pointer changes preserve the fade's momentum.
+- **Inactive opacity:** fade the other columns while keeping the focused column fully opaque.
+- **Transition animations:** enabled by default; new columns fade in. Disable for immediate updates.
+- **Animation style:** Crossfade (default) blends the focus color between columns; Slide moves one
+  highlight along the whole track; Grow expands the focus highlight from the marker's center; Wipe
+  fills along the bar direction. All four work with dots, lines, and vertical bars. Slide can travel
+  across gaps between markers. With Bouncy, both highlight edges move on independent springs:
+  the leading edge pulls ahead and the trailing edge catches up. **Slide stretch** controls this
+  deformation; zero keeps a fixed-length highlight. Rapid focus changes preserve position and
+  velocity, so the highlight flows through reversals instead of restarting from rest.
+- **Animation curve:** Linear has a constant pace; Ease in accelerates; Ease out (default) slows into
+  place; Ease in-out accelerates and then slows; Exponential out moves quickly and settles gently;
+  Bouncy uses a damped spring with a gentle start and natural settling. Slide can overshoot interior
+  columns; at the ends it compresses against the track boundary and releases as the spring rebounds.
+  Grow briefly expands past its final size. Opacity and Wipe geometry remain bounded.
+  The preset applies to focus changes and new-column fade-ins.
+- **Curve tuning:** Easing power adjusts Ease in/out/in-out; Exponential strength adjusts Exponential
+  out; Bounce depth adjusts Bouncy's spring damping (0 settles without overshoot, 1 is the default,
+  higher values produce a deeper rebound). Controls appear for the selected curve.
+- **Custom Bézier:** select this curve to edit X1, Y1, X2, and Y2. X controls time and Y controls progress;
+  all four range from 0 to 1. The initial values are `(0.25, 0.1, 0.25, 1)`. Use `(0, 0, 1, 1)` for a
+  straight, linear curve. Bounded controls keep opacity and sliding highlights within valid limits.
+- **Transition duration (ms):** defaults to 180 ms. Noctalia's global animation switch and speed apply
+  to every animation style and curve. For Bouncy, duration sets spring response time; motion ends
+  when both position and velocity settle, so it can continue beyond that duration.
+- **Use theme colors:** enabled by default, using the theme's primary color for focus and secondary
+  text color for other columns. Turn it off to choose **Focused column color** and **Other columns color**.
+
+Sizes are in logical pixels. The indicator follows the bar orientation, including vertical bars.
+When a floating app is focused, all columns use the inactive color. Stacked apps still share one
+column marker. Middle-click continues to open Noctalia's widget settings.
+
+For example, to select a thin line with custom colors in `settings.toml`:
+
+```toml
+[plugin_settings."83raiders/scroll-indicator"]
+style = "line"
+segment_length = 20
+line_thickness = 3
+alignment = "bottom"
+alignment_size = 34 # match your bar thickness (adjust for widget scale)
+edge_inset = 2
+line_gap = 0
+line_radius = 0
+outer_radius = 2
+hover_use_theme_color = false
+hover_color = "#ffffff"
+hover_opacity = 0.18
+hover_coverage = 100
+hover_thickness = 12
+hover_radius = 4
+inactive_opacity = 0.6
+animations = true
+animation_duration = 180
+animation_style = "slide"
+animation_curve = "bouncy"
+slide_fluidity = 0.65
+curve_power = 3.0
+use_theme_colors = false
+focused_color = "#89b4fa"
+inactive_color = "#9399b2"
+```
 
 ### Example setup
 
@@ -228,9 +318,49 @@ Everything the plugin runs:
 | `sh -c "hyprctl -j activeworkspace; hyprctl -j activewindow; hyprctl -j clients"` | on each relevant Hyprland event, plus every 2 s as a safety net (every 0.4 s without `socat`) | read the workspace layout, the focused window and window positions |
 | `socat -U - UNIX-CONNECT:$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock` | once, while the widget is loaded | listen to Hyprland's read-only event socket so the dots update instantly |
 
+Animation frames reuse the latest Hyprland snapshot; they do not launch additional processes. The
+widget ticks every 16 ms only during a transition, then resumes the existing safety-poll interval.
+Hover targets stay in fixed column positions above the animation layers, so tooltips remain usable
+while the focus highlight is moving. Hovering never launches additional processes. Window-title
+changes update the cached titles through Hyprland's `windowtitlev2` event.
+Columns that close disappear immediately. Changing appearance settings rebuilds the widget through
+Noctalia, so transitions apply to focus and column appearance rather than interpolating settings edits.
+
 No network access and no file writes. Hyprland only; other compositors are not supported.
 
 Source and issues: https://github.com/83raiders/hypr-scroll-indicator
 
 Idea from [jtams/waybar-hyprland-scroll-indicator](https://github.com/jtams/waybar-hyprland-scroll-indicator)
 (a Go module for Waybar). This is an independent Luau implementation for Noctalia.
+
+## Development checks
+
+From the repository root:
+
+```sh
+python3 .github/scripts/check.py
+noctalia plugins lint scroll-indicator
+lua .github/scripts/test_widget.lua
+```
+
+The Lua test simulates host calls and a clock to check every animation style and curve, interrupted
+animations, slide geometry, column identity, animation preferences, orientations, styling, and the
+Hyprland query budget. It also checks segment hover state, tooltip titles and fallbacks, stacked
+columns, title-change events, removal of hovered columns, cover customization, tuned curves, and
+independent outer-end rounding. On a live desktop, try the four animation styles on dots and lines, including
+vertical bars: check rapid focus reversals, skipped columns, and closing a focused column during a
+slide. Confirm new columns fade in and disabling transitions makes updates immediate. Hover each
+segment during a slide to check its native highlight and tooltip, then rename a window and confirm
+the tooltip updates without changing focus.
+
+For the additional styling settings, check hover color/opacity/coverage on both focused and inactive
+segments, including zero opacity with tooltips still enabled. Try a larger hover thickness on top- and
+bottom-aligned indicators. Check outer rounding on a single-column line and a continuous multi-column
+line with zero segment radius. Compare each curve's tuning controls and a custom Bézier curve while
+rapidly reversing focus; verify the highlight stays inside the track.
+
+For fluid motion, select **Slide + Bouncy**. Check that the highlight stretches during travel,
+compresses at the track ends, and keeps its momentum when switching focus back before it finishes.
+Compare **Slide stretch** at zero and one. Hover covers should fade smoothly and animation-disabled
+updates should remain immediate. Spring regression tests compare frame cadences, reversal velocity,
+stretch/compression, settling, and the subprocess query budget.
