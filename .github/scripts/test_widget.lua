@@ -47,7 +47,11 @@ local function fixture(config, globalAnimations, speed)
     return f.tree.props.key == 'alignment-frame' and f.tree.children[1] or f.tree
   end
   function f.content() return f.hoverLayer().children[1] end
-  function f.hoverCells() return f.hoverLayer().children[2].children end
+  function f.hoverCells()
+    local cells = {}
+    for _, layout in ipairs(f.hoverLayer().children[2].children) do table.insert(cells, layout.children[2]) end
+    return cells
+  end
   function f.hoverTargets()
     local targets = {}
     for _, cell in ipairs(f.hoverCells()) do table.insert(targets, cell.children[2]) end
@@ -57,7 +61,12 @@ local function fixture(config, globalAnimations, speed)
   function f.hover(state, id) env.onSegmentHover(state, id) end
   function f.markers()
     local content = f.content()
-    return content.props.key == 'slide-stack' and content.children[1].children or content.children
+    local cells = content.props.key == 'slide-stack' and content.children[1].children or content.children
+    local markers = {}
+    for _, cell in ipairs(cells) do
+      table.insert(markers, cell.children[2].children[1])
+    end
+    return markers
   end
   function f.overlay() return f.content().children[2] end
   function f.foreground(index)
@@ -107,7 +116,8 @@ f.data[3][3] = { address = 'c', at = {100, 0}, workspace = {name = '10'}, mapped
 f.focus('b', 500)
 near(f.markers()[1].props.opacity, 1); near(f.markers()[3].props.opacity, 0)
 f.tick(680); near(f.markers()[3].props.opacity, 1)
-table.remove(f.data[3], 3); f.focus('b', 700); assert(#f.markers() == 2)
+table.remove(f.data[3], 3); f.focus('b', 700); assert(#f.markers() == 3)
+f.tick(880); assert(#f.markers() == 2)
 -- Animation ticks do not replace the safety poll or increase query frequency.
 local before = f.queries
 f.tick(2699); assert(f.queries == before)
@@ -120,7 +130,8 @@ f.data[1].tiledLayout = 'dwindle'; f.focus('b', 3000)
 assert(not f.visible and f.interval > 16)
 f.data[1].tiledLayout = 'scrolling'; f.focus('b', 3100)
 near(f.markers()[1].props.opacity, 0)
-f.tick(3280); f.data[3] = {}; f.focus('b', 3300); assert(not f.visible)
+f.tick(3280); f.data[3] = {}; f.focus('b', 3300); assert(f.visible)
+f.tick(3480); assert(not f.visible)
 
 -- Either animation switch restores immediate updates and idle polling.
 for _, spec in ipairs({ {config = {animations = false}}, {config = {}, global = false} }) do
@@ -195,7 +206,7 @@ for _, vertical in ipairs({false, true}) do
       -- Removing the focused column keeps the rendered highlight and its spacers in bounds.
       f.focus('b', 940); f.tick(1040)
       table.remove(f.data[3], 2); f.focus('a', 1040)
-      assert(offset() >= 0 and offset() <= 0)
+      assert(offset() >= 0 and offset() + f.overlay().children[2].props[axis] <= f.overlay().props[axis] + 0.000001)
       for _, child in ipairs(f.overlay().children) do assert(child.props[axis] >= 0) end
       f.tick(1240); near(offset(), 0); assert(f.interval > 16)
       f.data[1].tiledLayout = 'dwindle'; f.focus('a', 1250); assert(not f.visible)
@@ -435,5 +446,112 @@ for _, preferences in ipairs({{animations = false}, {global = false}}) do
   near(f.overlay().props.opacity, 1); assert(f.interval == 2000)
   f.hover('true', 'a'); near(f.hoverCover(1).props.opacity, 0.18)
   assert(f.interval == 2000 and f.queries == 2)
+end
+-- Scaling reserves stable cells, scales both axes, and leaves polling independent of frames.
+for _, vertical in ipairs({false, true}) do
+  for _, style in ipairs({'dots', 'line'}) do
+    for _, mode in ipairs({'crossfade', 'grow', 'wipe', 'slide'}) do
+      local config = {animations = false, style = style, animation_style = mode,
+        active_scale = 200, hover_scale = 400, alignment = 'bottom', alignment_size = 8}
+      f = fixture(config); f.vertical = vertical; f.tick(0)
+      local main, cross = style == 'line' and 20 or 8, style == 'line' and 3 or 8
+      local axis, other = vertical and 'height' or 'width', vertical and 'width' or 'height'
+      local function activeInk()
+        return mode == 'slide' and f.overlay().children[2].children[1] or f.markers()[2]
+      end
+      near(activeInk().props[axis], main * 2); near(activeInk().props[other], cross * 2)
+      local target = f.hoverTargets()[2].props
+      near(target[axis], main * 4); near(target[other], cross * 4)
+      near(f.tree.props[other], cross * 4)
+      f.hover('true', 'b')
+      near(activeInk().props[axis], main * 4); near(activeInk().props[other], cross * 4)
+      near(f.hoverTargets()[2].props[axis], target[axis])
+      f.hover('false', 'b'); near(activeInk().props[axis], main * 2)
+      f.hover('true', 'a'); near(f.markers()[1].props[axis], main * 4)
+      f.hover('false', 'a'); near(f.markers()[1].props[axis], main)
+      valid(f.tree); assert(f.queries == 1)
+      -- Half-sized states are also supported without changing the reserved hit area.
+      config.active_scale, config.hover_scale = 50, 50
+      f.hover('true', 'b'); near(activeInk().props[axis], main * 0.5)
+      valid(f.tree)
+    end
+  end
+end
+-- A small active highlight remains visible as a spring compresses a large reserved cell.
+for _, vertical in ipairs({false, true}) do
+  f = fixture({style = 'line', animation_style = 'slide', animation_curve = 'bouncy',
+    active_scale = 50, hover_scale = 400, outer_radius = 4})
+  f.vertical = vertical; f.tick(0); settle(f); f.focus('a', f.now + 10)
+  for _ = 1, 60 do
+    f.tick(f.now + 8); valid(f.tree)
+    local highlight = f.overlay().children[2].children[1].props
+    assert(highlight.width > 0 and highlight.height > 0)
+  end
+  settle(f)
+end
+-- Scaling follows existing animation progress, including interruption and reduced motion.
+f = fixture({active_scale = 200, hover_scale = 400, animation_duration = 200})
+f.tick(0); settle(f); local queries = f.queries
+f.hover('true', 'a'); near(f.markers()[1].props.width, 8)
+f.tick(f.now + 16); assert(f.markers()[1].props.width > 8 and f.markers()[1].props.width < 32)
+settle(f); near(f.markers()[1].props.width, 32)
+f.hover('false', 'a'); settle(f); near(f.markers()[1].props.width, 8)
+assert(f.queries == queries)
+-- Opening/closing columns animate ink and layout, and the last exit finishes before hiding.
+for _, vertical in ipairs({false, true}) do
+  for _, style in ipairs({'dots', 'line'}) do
+    for _, mode in ipairs({'crossfade', 'slide', 'grow', 'wipe'}) do
+      for _, curve in ipairs({'linear', 'bouncy'}) do
+        f = fixture({style = style, animation_style = mode, animation_curve = curve,
+          animation_duration = 200, line_gap = 4, active_scale = 150, hover_scale = 200})
+        f.vertical = vertical; f.tick(0); settle(f)
+        local function extent() return -f.hoverLayer().props.gap end
+        local original = extent()
+        local queries = f.queries
+        -- Insert in the middle: existing space must not jump even when a gap is configured.
+        f.data[3][3] = {address = 'c', at = {50, 0}, workspace = {name = '10'}, mapped = true}
+        f.event('openwindow>>c'); near(extent(), original)
+        f.tick(f.now + 80); assert(extent() > original); valid(f.tree)
+        settle(f); local expanded = extent(); assert(expanded > original)
+        f.hover('true', 'c'); settle(f)
+        table.remove(f.data[3], 3); f.event('closewindow>>c')
+        near(extent(), expanded); assert(#f.markers() == 3)
+        assert(f.hoverTargets()[2].props.enabled == false)
+        f.tick(f.now + 80); assert(extent() < expanded and extent() > original); valid(f.tree)
+        settle(f); near(extent(), original); assert(#f.markers() == 2)
+        assert(f.queries == queries + 2, 'open/close frames must not query Hyprland')
+        -- Closing the first column collapses its gap without an end-of-animation jump.
+        table.remove(f.data[3], 1); f.event('closewindow>>a')
+        near(extent(), original); f.tick(f.now + 80); assert(extent() < original)
+        settle(f); assert(#f.markers() == 1)
+        f.data[3] = {}; f.event('closewindow>>b'); assert(f.visible)
+        f.tick(f.now + 80); assert(f.visible); valid(f.tree)
+        settle(f); assert(not f.visible)
+      end
+    end
+  end
+end
+-- Reappearing columns reverse their exit from the currently visible size and opacity.
+f = fixture({animation_curve = 'linear', animation_duration = 200})
+f.tick(0); settle(f)
+local returning = table.remove(f.data[3], 1); f.event('closewindow>>a'); f.tick(f.now + 60)
+local partialWidth, partialOpacity = f.markers()[1].props.width, f.markers()[1].props.opacity
+assert(partialWidth > 0 and partialWidth < 8)
+f.data[3][2] = returning; f.event('openwindow>>a')
+near(f.markers()[1].props.width, partialWidth); near(f.markers()[1].props.opacity, partialOpacity)
+settle(f); near(f.markers()[1].props.width, 8); assert(#f.markers() == 2)
+-- Removing a representative from a stack keeps its column identity and size.
+f = fixture({animation_duration = 200}); f.data[3][3] = {
+  address = 'c', at = {0, 20}, workspace = {name = '10'}, mapped = true}
+f.tick(0); settle(f); local before = -f.hoverLayer().props.gap
+local id = f.markers()[1].props.key
+table.remove(f.data[3], 1); f.event('closewindow>>a')
+near(-f.hoverLayer().props.gap, before); assert(#f.markers() == 2)
+assert(f.markers()[1].props.key == id); near(f.markers()[1].props.opacity, 1)
+-- Both animation switches remove closed columns immediately, including the final one.
+for _, spec in ipairs({{animations = false}, {global = false}}) do
+  f = fixture({animations = spec.animations}, spec.global); f.tick(0)
+  table.remove(f.data[3], 1); f.event('closewindow>>a'); assert(#f.markers() == 1)
+  f.data[3] = {}; f.event('closewindow>>b'); assert(not f.visible)
 end
 print('Widget tests passed: animation styles and curves, slide geometry, interruption, stable columns, preferences, timing, query budget, styling and orientations')
