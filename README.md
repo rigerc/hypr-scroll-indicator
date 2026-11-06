@@ -3,7 +3,7 @@
 A [Noctalia](https://github.com/noctalia-dev/noctalia) plugin source with one plugin, also available in the
 Noctalia plugin store:
 
-- **[scroll-indicator](scroll-indicator/)**: dots on your bar showing which column you're on in a Hyprland
+- **[scroll-indicator](scroll-indicator/)**: dots or a line on your bar showing which column you're on in a Hyprland
   scrolling-layout workspace.
 
 Install steps and everything else are in **[scroll-indicator/README.md](scroll-indicator/README.md)**:
