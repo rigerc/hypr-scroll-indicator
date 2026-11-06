@@ -4,7 +4,7 @@
 [[plugin]]
 id           = "83raiders/scroll-indicator"
 name         = "Scroll Indicator"
-version      = "1.9.0"
+version      = "1.10.0"
 plugin_api   = 43
 author       = "83raiders"
 license      = "MIT"

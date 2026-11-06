@@ -1,6 +1,6 @@
 id           = "83raiders/scroll-indicator"
 name         = "Scroll Indicator"
-version      = "1.9.0"
+version      = "1.10.0"
 plugin_api   = 43
 author       = "83raiders"
 license      = "MIT"
@@ -143,8 +143,29 @@ max = 12
 visible_when = { key = "style", values = ["line"] }
 
 [[setting]]
+key = "active_scale"
+type = "int"
+label_key = "settings.active_scale.label"
+description_key = "settings.active_scale.description"
+default = 100
+min = 50
+max = 400
+step = 5
+
+[[setting]]
+key = "hover_scale"
+type = "int"
+label_key = "settings.hover_scale.label"
+description_key = "settings.hover_scale.description"
+default = 100
+min = 50
+max = 400
+step = 5
+
+[[setting]]
 key = "inactive_opacity"
 type = "double"
+step = 0.05
 label_key = "settings.inactive_opacity.label"
 description_key = "settings.inactive_opacity.description"
 default = 1.0
@@ -192,6 +213,7 @@ visible_when = { key = "hover_use_theme_color", values = ["false"] }
 [[setting]]
 key = "hover_opacity"
 type = "double"
+step = 0.01
 label_key = "settings.hover_opacity.label"
 description_key = "settings.hover_opacity.description"
 default = 0.18
@@ -249,6 +271,7 @@ options = [
 [[setting]]
 key = "slide_fluidity"
 type = "double"
+step = 0.05
 label_key = "settings.slide_fluidity.label"
 description_key = "settings.slide_fluidity.description"
 default = 0.65
@@ -276,6 +299,8 @@ options = [
 [[setting]]
 key = "curve_power"
 type = "double"
+advanced = true
+step = 0.1
 label_key = "settings.curve_power.label"
 description_key = "settings.curve_power.description"
 default = 3.0
@@ -286,6 +311,8 @@ visible_when = { key = "animation_curve", values = ["ease_in", "ease_out", "ease
 [[setting]]
 key = "curve_exponential"
 type = "double"
+advanced = true
+step = 0.5
 label_key = "settings.curve_exponential.label"
 description_key = "settings.curve_exponential.description"
 default = 10.0
@@ -296,6 +323,8 @@ visible_when = { key = "animation_curve", values = ["exponential_out"] }
 [[setting]]
 key = "curve_bounce_strength"
 type = "double"
+advanced = true
+step = 0.1
 label_key = "settings.curve_bounce_strength.label"
 description_key = "settings.curve_bounce_strength.description"
 default = 1.0
@@ -306,6 +335,7 @@ visible_when = { key = "animation_curve", values = ["bouncy"] }
 [[setting]]
 key = "curve_x1"
 type = "double"
+step = 0.01
 label_key = "settings.curve_x1.label"
 description_key = "settings.curve_x1.description"
 default = 0.25
@@ -316,6 +346,7 @@ visible_when = { key = "animation_curve", values = ["custom"] }
 [[setting]]
 key = "curve_y1"
 type = "double"
+step = 0.01
 label_key = "settings.curve_y1.label"
 description_key = "settings.curve_y1.description"
 default = 0.1
@@ -326,6 +357,7 @@ visible_when = { key = "animation_curve", values = ["custom"] }
 [[setting]]
 key = "curve_x2"
 type = "double"
+step = 0.01
 label_key = "settings.curve_x2.label"
 description_key = "settings.curve_x2.description"
 default = 0.25
@@ -336,6 +368,7 @@ visible_when = { key = "animation_curve", values = ["custom"] }
 [[setting]]
 key = "curve_y2"
 type = "double"
+step = 0.01
 label_key = "settings.curve_y2.label"
 description_key = "settings.curve_y2.description"
 default = 1.0

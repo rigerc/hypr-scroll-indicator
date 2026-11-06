@@ -68,13 +68,22 @@ Changes save through Noctalia and apply to the widget automatically.
 - **Outer edge radius:** rounds only the two outside ends of the line, independently of segment
   rounding. Set the segment corner radius to zero for a continuous line with straight internal joins.
   End radii are capped at half the segment length or line thickness, whichever is smaller.
+- **Active scale (%) / Hover scale (%):** independently resize the focused marker and the marker under
+  the pointer from 50% to 400%. Both default to 100% (normal size); 200% doubles both dimensions.
+  When a marker is active and hovered, the larger state scale wins. Space is reserved for the largest
+  configured size so hovering never shifts neighboring columns or tooltip targets. Large percentages
+  need more bar space. Scaling works with every animation style and in vertical bars.
 - **Hover cover:** choose the theme foreground or a custom color, opacity, length coverage (10–100%),
   thickness, and corner radius. Coverage is centered within each segment. Zero thickness follows the
   marker size; a larger thickness also enlarges the tooltip target. Keep it within the bar's available
   space. Zero opacity hides the cover while retaining window-title tooltips. Covers fade in and out
   smoothly when animations are enabled; rapid pointer changes preserve the fade's momentum.
 - **Inactive opacity:** fade the other columns while keeping the focused column fully opaque.
-- **Transition animations:** enabled by default; new columns fade in. Disable for immediate updates.
+- **Transition animations:** enabled by default. New columns expand and fade in; closing columns
+  shrink and fade out while neighboring columns move into place. The last column finishes its exit
+  before the widget hides. Opening or closing a window in an existing stack keeps the same column
+  marker. Rapid open/close changes continue from the current size, and workspace switches reset
+  immediately. Disable for immediate updates; Noctalia’s global animation switch also applies.
 - **Animation style:** Crossfade (default) blends the focus color between columns; Slide moves one
   highlight along the whole track; Grow expands the focus highlight from the marker's center; Wipe
   fills along the bar direction. All four work with dots, lines, and vertical bars. Slide can travel
@@ -90,7 +99,7 @@ Changes save through Noctalia and apply to the widget automatically.
   The preset applies to focus changes and new-column fade-ins.
 - **Curve tuning:** Easing power adjusts Ease in/out/in-out; Exponential strength adjusts Exponential
   out; Bounce depth adjusts Bouncy's spring damping (0 settles without overshoot, 1 is the default,
-  higher values produce a deeper rebound). Controls appear for the selected curve.
+  higher values produce a deeper rebound). These fine-tuning controls appear under **Show advanced** for the selected curve.
 - **Custom Bézier:** select this curve to edit X1, Y1, X2, and Y2. X controls time and Y controls progress;
   all four range from 0 to 1. The initial values are `(0.25, 0.1, 0.25, 1)`. Use `(0, 0, 1, 1)` for a
   straight, linear curve. Bounded controls keep opacity and sliding highlights within valid limits.
@@ -99,6 +108,8 @@ Changes save through Noctalia and apply to the widget automatically.
   when both position and velocity settle, so it can continue beyond that duration.
 - **Use theme colors:** enabled by default, using the theme's primary color for focus and secondary
   text color for other columns. Turn it off to choose **Focused column color** and **Other columns color**.
+  Color controls use Noctalia’s native selector: choose a theme role, or **Custom** to open its color
+  picker. The hover color uses the same picker. Opacity and curve sliders support fractional steps.
 
 Sizes are in logical pixels. The indicator follows the bar orientation, including vertical bars.
 When a floating app is focused, all columns use the inactive color. Stacked apps still share one
@@ -123,6 +134,8 @@ hover_opacity = 0.18
 hover_coverage = 100
 hover_thickness = 12
 hover_radius = 4
+active_scale = 150
+hover_scale = 200
 inactive_opacity = 0.6
 animations = true
 animation_duration = 180
