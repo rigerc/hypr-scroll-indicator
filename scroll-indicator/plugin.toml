@@ -1,6 +1,6 @@
 id           = "83raiders/scroll-indicator"
 name         = "Scroll Indicator"
-version      = "1.10.0"
+version      = "1.11.0"
 plugin_api   = 43
 author       = "83raiders"
 license      = "MIT"
@@ -8,6 +8,8 @@ icon         = "dots"
 description  = "Shows your column position in Hyprland's scrolling layout as dots or a focused-color line on the bar."
 tags         = ["hyprland", "indicator", "bar"]
 dependencies = ["hyprctl", "socat"]
+
+# Indicator appearance
 
 [[setting]]
 key = "style"
@@ -21,36 +23,16 @@ options = [
 ]
 
 [[setting]]
-key = "alignment"
+key = "dot_shape"
 type = "select"
-label_key = "settings.alignment.label"
-description_key = "settings.alignment.description"
-default = "center"
+label_key = "settings.dot_shape.label"
+description_key = "settings.dot_shape.description"
+default = "round"
+visible_when = { key = "style", values = ["dots"] }
 options = [
-  { value = "center", label_key = "options.alignment.center" },
-  { value = "top", label_key = "options.alignment.top" },
-  { value = "bottom", label_key = "options.alignment.bottom" },
+  { value = "round", label_key = "options.dot_shape.round" },
+  { value = "square", label_key = "options.dot_shape.square" },
 ]
-
-[[setting]]
-key = "alignment_size"
-type = "int"
-label_key = "settings.alignment_size.label"
-description_key = "settings.alignment_size.description"
-default = 34
-min = 8
-max = 160
-visible_when = { key = "alignment", values = ["top", "bottom"] }
-
-[[setting]]
-key = "edge_inset"
-type = "int"
-label_key = "settings.edge_inset.label"
-description_key = "settings.edge_inset.description"
-default = 2
-min = 0
-max = 40
-visible_when = { key = "alignment", values = ["top", "bottom"] }
 
 [[setting]]
 key = "dot_size"
@@ -71,18 +53,6 @@ default = 6
 min = 0
 max = 20
 visible_when = { key = "style", values = ["dots"] }
-
-[[setting]]
-key = "dot_shape"
-type = "select"
-label_key = "settings.dot_shape.label"
-description_key = "settings.dot_shape.description"
-default = "round"
-visible_when = { key = "style", values = ["dots"] }
-options = [
-  { value = "round", label_key = "options.dot_shape.round" },
-  { value = "square", label_key = "options.dot_shape.square" },
-]
 
 [[setting]]
 key = "fill_inactive_dots"
@@ -142,6 +112,42 @@ min = 0
 max = 12
 visible_when = { key = "style", values = ["line"] }
 
+# Position on the bar
+
+[[setting]]
+key = "alignment"
+type = "select"
+label_key = "settings.alignment.label"
+description_key = "settings.alignment.description"
+default = "center"
+options = [
+  { value = "center", label_key = "options.alignment.center" },
+  { value = "top", label_key = "options.alignment.top" },
+  { value = "bottom", label_key = "options.alignment.bottom" },
+]
+
+[[setting]]
+key = "alignment_size"
+type = "int"
+label_key = "settings.alignment_size.label"
+description_key = "settings.alignment_size.description"
+default = 34
+min = 8
+max = 160
+visible_when = { key = "alignment", values = ["top", "bottom"] }
+
+[[setting]]
+key = "edge_inset"
+type = "int"
+label_key = "settings.edge_inset.label"
+description_key = "settings.edge_inset.description"
+default = 2
+min = 0
+max = 40
+visible_when = { key = "alignment", values = ["top", "bottom"] }
+
+# Focus and colors
+
 [[setting]]
 key = "active_scale"
 type = "int"
@@ -151,26 +157,6 @@ default = 100
 min = 50
 max = 400
 step = 5
-
-[[setting]]
-key = "hover_scale"
-type = "int"
-label_key = "settings.hover_scale.label"
-description_key = "settings.hover_scale.description"
-default = 100
-min = 50
-max = 400
-step = 5
-
-[[setting]]
-key = "inactive_opacity"
-type = "double"
-step = 0.05
-label_key = "settings.inactive_opacity.label"
-description_key = "settings.inactive_opacity.description"
-default = 1.0
-min = 0.1
-max = 1.0
 
 [[setting]]
 key = "use_theme_colors"
@@ -196,6 +182,45 @@ default = "#9399b2"
 visible_when = { key = "use_theme_colors", values = ["false"] }
 
 [[setting]]
+key = "inactive_opacity"
+type = "double"
+step = 0.05
+label_key = "settings.inactive_opacity.label"
+description_key = "settings.inactive_opacity.description"
+default = 1.0
+min = 0.1
+max = 1.0
+
+# Hover feedback
+
+[[setting]]
+key = "hover_scale"
+type = "int"
+label_key = "settings.hover_scale.label"
+description_key = "settings.hover_scale.description"
+default = 100
+min = 50
+max = 400
+step = 5
+
+[[setting]]
+key = "hover_highlight"
+type = "bool"
+label_key = "settings.hover_highlight.label"
+description_key = "settings.hover_highlight.description"
+default = true
+
+[[setting]]
+key = "hover_opacity"
+type = "double"
+step = 0.01
+label_key = "settings.hover_opacity.label"
+description_key = "settings.hover_opacity.description"
+default = 0.18
+min = 0
+max = 1
+
+[[setting]]
 key = "hover_use_theme_color"
 type = "bool"
 label_key = "settings.hover_use_theme_color.label"
@@ -211,18 +236,9 @@ default = "#ffffff"
 visible_when = { key = "hover_use_theme_color", values = ["false"] }
 
 [[setting]]
-key = "hover_opacity"
-type = "double"
-step = 0.01
-label_key = "settings.hover_opacity.label"
-description_key = "settings.hover_opacity.description"
-default = 0.18
-min = 0
-max = 1
-
-[[setting]]
 key = "hover_coverage"
 type = "int"
+advanced = true
 label_key = "settings.hover_coverage.label"
 description_key = "settings.hover_coverage.description"
 default = 100
@@ -232,6 +248,7 @@ max = 100
 [[setting]]
 key = "hover_thickness"
 type = "int"
+advanced = true
 label_key = "settings.hover_thickness.label"
 description_key = "settings.hover_thickness.description"
 default = 0
@@ -241,11 +258,14 @@ max = 64
 [[setting]]
 key = "hover_radius"
 type = "int"
+advanced = true
 label_key = "settings.hover_radius.label"
 description_key = "settings.hover_radius.description"
 default = 4
 min = 0
 max = 32
+
+# Motion
 
 [[setting]]
 key = "animations"
@@ -269,15 +289,14 @@ options = [
 ]
 
 [[setting]]
-key = "slide_fluidity"
-type = "double"
-step = 0.05
-label_key = "settings.slide_fluidity.label"
-description_key = "settings.slide_fluidity.description"
-default = 0.65
-min = 0.0
-max = 1.0
-visible_when = { key = "animation_style", values = ["slide"] }
+key = "animation_duration"
+type = "int"
+label_key = "settings.animation_duration.label"
+description_key = "settings.animation_duration.description"
+default = 180
+min = 50
+max = 1000
+visible_when = { key = "animations", values = ["true"] }
 
 [[setting]]
 key = "animation_curve"
@@ -377,14 +396,15 @@ max = 1
 visible_when = { key = "animation_curve", values = ["custom"] }
 
 [[setting]]
-key = "animation_duration"
-type = "int"
-label_key = "settings.animation_duration.label"
-description_key = "settings.animation_duration.description"
-default = 180
-min = 50
-max = 1000
-visible_when = { key = "animations", values = ["true"] }
+key = "slide_fluidity"
+type = "double"
+step = 0.05
+label_key = "settings.slide_fluidity.label"
+description_key = "settings.slide_fluidity.description"
+default = 0.65
+min = 0.0
+max = 1.0
+visible_when = { key = "animation_style", values = ["slide"] }
 
 [[widget]]
 id    = "dots"

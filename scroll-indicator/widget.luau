@@ -26,6 +26,20 @@ local animating = false
 local lastPollMs = -math.huge
 local curveOptions = {}
 
+-- Negative gaps center ink even when it is wider than its layout slot. Native Flex
+-- clamps justify="center" at zero overflow, so a plain centered row would shift it.
+local function inkCell(key, main, cross, inkMain, vertical, ink)
+  local container = vertical and ui.column or ui.row
+  local function halfSlot(key)
+    return ui.box({ key = key, width = vertical and cross or main / 2,
+      height = vertical and main / 2 or cross, fill = "surface/0" })
+  end
+  return container({ key = key, width = vertical and cross or main,
+    height = vertical and main or cross, gap = -inkMain / 2, align = "center" }, {
+    halfSlot("before"), ink, halfSlot("after"),
+  })
+end
+
 local function pollInterval()
   return streaming and 2000 or 400
 end
@@ -348,16 +362,17 @@ local function show(ws, active, clients)
   local hoverColor = noctalia.getConfig("hover_use_theme_color") ~= false and "on_surface"
     or noctalia.getConfig("hover_color")
   local hoverOpacity = noctalia.getConfig("hover_opacity") or 0.18
+  if noctalia.getConfig("hover_highlight") == false then hoverOpacity = 0 end
   local hoverCoverage = (noctalia.getConfig("hover_coverage") or 100) / 100
   local hoverThickness = noctalia.getConfig("hover_thickness") or 0
   local hoverRadius = noctalia.getConfig("hover_radius") or 4
   local activeScale = math.max(0.5, math.min(4, (noctalia.getConfig("active_scale") or 100) / 100))
   local hoverScale = math.max(0.5, math.min(4, (noctalia.getConfig("hover_scale") or 100) / 100))
-  -- Reserve stable cells for the largest state; pointer targets never move during a transition.
+  -- Keep normal segment spacing; reserve only cross-axis room for scaled ink.
   local maxScale = math.max(1, activeScale, hoverScale)
   local baseMain = style == "line" and length or dotSize
   local baseCross = style == "line" and thickness or dotSize
-  local slotMain, slotCross = baseMain * maxScale, math.max(baseCross, hoverThickness) * maxScale
+  local slotMain, slotCross = baseMain, math.max(baseCross, hoverThickness) * maxScale
   local scaling = activeScale ~= 1 or hoverScale ~= 1
   -- Match by any surviving window so closing the representative of a stack does not
   -- animate a column away while other windows in that column are still open.
@@ -462,8 +477,7 @@ local function show(ws, active, clients)
     marker = container({ key = id .. ":layout", gap = 0, align = "center" }, {
       ui.box({ key = "gap", width = vertical and slotCross or cellGap,
         height = vertical and cellGap or slotCross, fill = "surface/0" }),
-      ui.row({ key = id .. ":cell", width = vertical and slotCross or cellMain,
-        height = vertical and cellMain or slotCross, align = "center", justify = "center" }, { marker }),
+      inkCell(id .. ":cell", cellMain, slotCross, vertical and height or width, vertical, marker),
     })
     table.insert(markers, marker)
     table.sort(column.windows, function(a, b) return (a.address or "") < (b.address or "") end)
@@ -482,14 +496,12 @@ local function show(ws, active, clients)
     -- full control over the cover instead of inheriting the button's opaque hover chrome.
     local hoverCell = container({ key = id .. ":hover-cell", gap = -cellMain,
       width = cellWidth, height = cellHeight }, {
-      ui.row({ key = "cover-frame", width = cellWidth, height = cellHeight,
-        align = "center", justify = "center" }, {
+      inkCell("cover-frame", cellMain, cellCross, main * hoverCoverage, vertical,
         ui.box({ key = "cover", fill = hoverColor,
           width = vertical and cross or main * hoverCoverage,
           height = vertical and main * hoverCoverage or cross,
           radius = math.min(hoverRadius * scale, main * hoverCoverage / 2, cross / 2),
-          opacity = hover * hoverOpacity }),
-      }),
+          opacity = hover * hoverOpacity })),
       ui.button({ key = id, text = "", variant = "ghost", width = cellWidth, height = cellHeight,
         opacity = 0,
         tooltip = table.concat(titles, "\n") .. string.format("\nColumn %d of %d", column.index or 0, #xs),
@@ -564,8 +576,7 @@ local function show(ws, active, clients)
         math.max(lineRadius, outerRadius - (total - highlightLength - offset)) * scale, vertical)
     end
     if scaling or inkCross ~= crossSize then
-      highlight = ui.row({ key = "highlight-cell", width = vertical and crossSize or highlightLength,
-        height = vertical and highlightLength or crossSize, align = "center", justify = "center" }, { highlight })
+      highlight = inkCell("highlight-cell", highlightLength, crossSize, inkLength, vertical, highlight)
     end
     local overlay = container({ key = "sliding-highlight", gap = 0, opacity = opacity,
       width = vertical and crossSize or total, height = vertical and total or crossSize,

@@ -57,14 +57,14 @@ local function fixture(config, globalAnimations, speed)
     for _, cell in ipairs(f.hoverCells()) do table.insert(targets, cell.children[2]) end
     return targets
   end
-  function f.hoverCover(index) return f.hoverCells()[index].children[1].children[1] end
+  function f.hoverCover(index) return f.hoverCells()[index].children[1].children[2] end
   function f.hover(state, id) env.onSegmentHover(state, id) end
   function f.markers()
     local content = f.content()
     local cells = content.props.key == 'slide-stack' and content.children[1].children or content.children
     local markers = {}
     for _, cell in ipairs(cells) do
-      table.insert(markers, cell.children[2].children[1])
+      table.insert(markers, cell.children[2].children[2])
     end
     return markers
   end
@@ -368,6 +368,15 @@ for _, vertical in ipairs({false, true}) do
     f.hover('false', 'a'); near(f.hoverCover(1).props.opacity, 0)
     config.hover_opacity = 0; f.hover('true', 'b')
     near(f.hoverCover(2).props.opacity, 0); assert(f.hoverTargets()[2].props.tooltip ~= '')
+    -- The explicit switch hides paint without changing tooltips, scaling, or saved opacity.
+    config.hover_opacity, config.hover_highlight, config.hover_scale = 0.65, false, 200
+    f.hover('true', 'a')
+    near(f.hoverCover(1).props.opacity, 0)
+    near(f.markers()[1].props[vertical and 'height' or 'width'], main * 2)
+    assert(f.hoverTargets()[1].props.tooltip ~= '')
+    assert(f.hoverTargets()[1].props.onRightClick == 'onRightClick')
+    config.hover_highlight = true; f.tick(10)
+    near(f.hoverCover(1).props.opacity, 0.65)
     assert(f.queries == 1)
   end
 end
@@ -447,44 +456,63 @@ for _, preferences in ipairs({{animations = false}, {global = false}}) do
   f.hover('true', 'a'); near(f.hoverCover(1).props.opacity, 0.18)
   assert(f.interval == 2000 and f.queries == 2)
 end
--- Scaling reserves stable cells, scales both axes, and leaves polling independent of frames.
+-- Scaling overlays normal slots, scales both axes, and leaves polling independent of frames.
 for _, vertical in ipairs({false, true}) do
   for _, style in ipairs({'dots', 'line'}) do
     for _, mode in ipairs({'crossfade', 'grow', 'wipe', 'slide'}) do
       local config = {animations = false, style = style, animation_style = mode,
-        active_scale = 200, hover_scale = 400, alignment = 'bottom', alignment_size = 8}
+        active_scale = 200, hover_scale = 400, dot_spacing = 5, line_gap = 3,
+        alignment = 'bottom', alignment_size = 8}
       f = fixture(config); f.vertical = vertical; f.tick(0)
       local main, cross = style == 'line' and 20 or 8, style == 'line' and 3 or 8
       local axis, other = vertical and 'height' or 'width', vertical and 'width' or 'height'
+      local function checkLayout()
+        near(-f.hoverLayer().props.gap, main * 2 + (style == 'line' and 3 or 5))
+        -- Verify actual ink placement: Flex cannot center an overflowing child with justify alone.
+        local function centered(node)
+          if node.props.key == 'cover-frame' or node.props.key == 'highlight-cell'
+              or (node.props.key or ''):match(':cell$') then
+            local before, ink, after = table.unpack(node.children)
+            local gap = node.props.gap
+            near(before.props[axis] + gap + ink.props[axis] / 2, node.props[axis] / 2)
+            near(before.props[axis] + ink.props[axis] + after.props[axis] + 2 * gap, node.props[axis])
+          end
+          for _, child in ipairs(node.children or {}) do centered(child) end
+        end
+        centered(f.tree)
+      end
+      checkLayout()
       local function activeInk()
-        return mode == 'slide' and f.overlay().children[2].children[1] or f.markers()[2]
+        return mode == 'slide' and f.overlay().children[2].children[2] or f.markers()[2]
       end
       near(activeInk().props[axis], main * 2); near(activeInk().props[other], cross * 2)
       local target = f.hoverTargets()[2].props
-      near(target[axis], main * 4); near(target[other], cross * 4)
+      near(target[axis], main); near(target[other], cross * 4)
       near(f.tree.props[other], cross * 4)
       f.hover('true', 'b')
       near(activeInk().props[axis], main * 4); near(activeInk().props[other], cross * 4)
-      near(f.hoverTargets()[2].props[axis], target[axis])
+      near(f.hoverTargets()[2].props[axis], target[axis]); checkLayout()
       f.hover('false', 'b'); near(activeInk().props[axis], main * 2)
       f.hover('true', 'a'); near(f.markers()[1].props[axis], main * 4)
-      f.hover('false', 'a'); near(f.markers()[1].props[axis], main)
+      f.hover('false', 'a'); near(f.markers()[1].props[axis], main); checkLayout()
       valid(f.tree); assert(f.queries == 1)
-      -- Half-sized states are also supported without changing the reserved hit area.
+      f.focus('a', 10); checkLayout()
+      -- Half-sized states also keep the normal hit area.
+      f.focus('b', 20)
       config.active_scale, config.hover_scale = 50, 50
-      f.hover('true', 'b'); near(activeInk().props[axis], main * 0.5)
+      f.hover('true', 'b'); near(activeInk().props[axis], main * 0.5); checkLayout()
       valid(f.tree)
     end
   end
 end
--- A small active highlight remains visible as a spring compresses a large reserved cell.
+-- A small active highlight remains visible as a spring compresses its slot.
 for _, vertical in ipairs({false, true}) do
   f = fixture({style = 'line', animation_style = 'slide', animation_curve = 'bouncy',
     active_scale = 50, hover_scale = 400, outer_radius = 4})
   f.vertical = vertical; f.tick(0); settle(f); f.focus('a', f.now + 10)
   for _ = 1, 60 do
     f.tick(f.now + 8); valid(f.tree)
-    local highlight = f.overlay().children[2].children[1].props
+    local highlight = f.overlay().children[2].children[2].props
     assert(highlight.width > 0 and highlight.height > 0)
   end
   settle(f)
@@ -492,8 +520,11 @@ end
 -- Scaling follows existing animation progress, including interruption and reduced motion.
 f = fixture({active_scale = 200, hover_scale = 400, animation_duration = 200})
 f.tick(0); settle(f); local queries = f.queries
+local unscaledExtent = 8 * 2 + 6
+near(-f.hoverLayer().props.gap, unscaledExtent)
 f.hover('true', 'a'); near(f.markers()[1].props.width, 8)
 f.tick(f.now + 16); assert(f.markers()[1].props.width > 8 and f.markers()[1].props.width < 32)
+near(-f.hoverLayer().props.gap, unscaledExtent)
 settle(f); near(f.markers()[1].props.width, 32)
 f.hover('false', 'a'); settle(f); near(f.markers()[1].props.width, 8)
 assert(f.queries == queries)
